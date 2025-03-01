@@ -1,2 +1,2 @@
-* [Quản lý sinh viên](Submit/Quản lý sinh viên)
+* [Quản lý sinh viên](Submit/StudentManagement)
 * [JUnit](Submit/JUnit)
