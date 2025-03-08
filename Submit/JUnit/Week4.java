@@ -1,4 +1,5 @@
 public class Week4 {
+    /** max2Int.*/
     public static int max2Int(int a, int b) {
         if (a >= b) {
             return a;
@@ -7,6 +8,7 @@ public class Week4 {
         }
     }
 
+    /** minArray.*/
     public static int minArray (int[] array) {
         int min_ = array[0];
         int size;
@@ -21,6 +23,7 @@ public class Week4 {
         return min_;
     }
 
+    /** calculateBMI. */
     public static String calculateBMI(double weight, double height) {
         double result = weight / (height * height);
         double BMI = (double) Math.round(result * 100) / 100;
