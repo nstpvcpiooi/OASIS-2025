@@ -8,3 +8,6 @@ Khuất Tuấn Anh - 22028248 - Bài tập OOP OASIS
 7. [Transaction](Submit/Transaction)
 8. [Kế Thừa 1](Submit/KeThua1)
 9. [Kế Thừa 2](Submit/KeThua2)
+10. [Đa Hình 1](Submit/DaHinh1)
+11. [Đa Hình 2](Submit/DaHinh2)
+12. [Đa Hình 3](Submit/DaHinh3)
