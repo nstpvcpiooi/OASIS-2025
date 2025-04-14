@@ -11,3 +11,4 @@ Khuất Tuấn Anh - 22028248 - Bài tập OOP OASIS
 10. [Đa Hình 1](Submit/DaHinh1)
 11. [Đa Hình 2](Submit/DaHinh2)
 12. [Đa Hình 3](Submit/DaHinh3)
+13. [Bài Kiểm Tra Số 1 - Abstract](Submit/Test1-Abstract)
