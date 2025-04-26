@@ -12,3 +12,7 @@ Khuất Tuấn Anh - 22028248 - Bài tập OOP OASIS
 11. [Đa Hình 2](Submit/DaHinh2)
 12. [Đa Hình 3](Submit/DaHinh3)
 13. [Bài Kiểm Tra Số 1 - Abstract](Submit/Test1-Abstract)
+14. [Bài Kiểm Tra Số 2 - Interface](Submit/Test2-Interface)
+15. [Ngoại lệ 1](Submit/Exception1)
+16. [Ngoại lệ 2](Submit/Exception2)
+17. [Cờ Vua 1](Submit/CoVua1)
