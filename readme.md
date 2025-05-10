@@ -16,3 +16,5 @@ Khuất Tuấn Anh - 22028248 - Bài tập OOP OASIS
 15. [Ngoại lệ 1](Submit/Exception1)
 16. [Ngoại lệ 2](Submit/Exception2)
 17. [Cờ Vua 1](Submit/CoVua1)
+18. [Phân tích chương trình](Submit/PhanTichChuongTrinh)
+19. [Banking System](Submit/BankingSystem)
