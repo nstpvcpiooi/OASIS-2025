@@ -1,7 +1,33 @@
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 
+/**
+ * A class to analyze Java source code and extract function signatures.
+ * This class processes Java files to identify package declarations,
+ * imports, class definitions, and static method signatures.
+ */
 public class Week10 {
+    private static final String PACKAGE_KEYWORD = "package";
+    private static final String IMPORT_KEYWORD = "import";
+    private static final String CLASS_KEYWORD = "class";
+    private static final String STATIC_KEYWORD = "static";
+    private static final String ENUM_KEYWORD = "enum";
+    private static final String INTERFACE_KEYWORD = "interface";
+    private static final String JAVA_LANG_PACKAGE = "java.lang.";
+    private static final String SEMICOLON = ";";
+    private static final String SPACE = " ";
+    private static final String COMMA = ",";
+    private static final String OPEN_PAREN = "(";
+    private static final String CLOSE_PAREN = ")";
+    private static final String OPEN_BRACKET = "<";
+    private static final String CLOSE_BRACKET = ">";
+    private static final String ARRAY_BRACKETS = "[]";
+    private static final String VARARGS = "...";
+    private static final String EQUALS = "=";
+    private static final String WILDCARD = "?";
+    private static final String FINAL_KEYWORD = "final";
+
     private String packageName;
     private final ArrayList<String> importedLibraries = new ArrayList<>();
     private final ArrayList<String> classNames = new ArrayList<>();
@@ -14,9 +40,8 @@ public class Week10 {
      * @param line The line of code containing package information.
      */
     private void processPackage(String line) {
-        line = line.trim();
-        String[] words = line.split(" ");
-        packageName = words[words.length - 1].replace(";", "");
+        String[] words = line.trim().split(SPACE);
+        packageName = words[words.length - 1].replace(SEMICOLON, "");
     }
 
     /**
@@ -25,9 +50,8 @@ public class Week10 {
      * @param line The line of code containing import information.
      */
     private void processImports(String line) {
-        line = line.trim();
-        String[] words = line.split(" ");
-        importedLibraries.add(words[words.length - 1].replace(";", ""));
+        String[] words = line.trim().split(SPACE);
+        importedLibraries.add(words[words.length - 1].replace(SEMICOLON, ""));
     }
 
     /**
@@ -36,71 +60,95 @@ public class Week10 {
      * @param line The line of code containing class information.
      */
     private void processClass(String line) {
-        int start = line.indexOf("class ") + 6;
-        int end = line.indexOf(" ", start);
-        if (end < 0) {
+        int startIndex = line.indexOf(CLASS_KEYWORD + SPACE) + CLASS_KEYWORD.length() + 1;
+        int endIndex = line.indexOf(SPACE, startIndex);
+        if (endIndex < 0) {
+            System.out.println("Error: No class name found in line: " + line);
             return;
         }
-        String name = line.substring(start, end).trim();
-        String[] splits = name.split("<");
-        classNames.add(packageName + "." + splits[0]);
+
+        String className = line.substring(startIndex, endIndex).trim();
+        String[] genericParts = className.split(OPEN_BRACKET);
+        classNames.add(packageName + "." + genericParts[0]);
     }
 
     /**
-     * Fix the library or class name if necessary.
+     * Resolve the full qualified name of a library or class.
      *
-     * @param str The library or class name to fix.
-     * @return The fixed library or class name.
+     * @param name The short name to resolve.
+     * @return The fully qualified name.
      */
-    private String fixLibrary(String str) {
+    private String resolveFullName(String name) {
+        // Check imported libraries
         for (String lib : importedLibraries) {
-            if (lib.endsWith("." + str)) {
+            if (lib.endsWith("." + name)) {
                 return lib;
             }
         }
-        for (String c : classNames) {
-            if (c.endsWith(str)) {
-                return c;
+
+        // Check defined classes
+        for (String className : classNames) {
+            if (className.endsWith(name)) {
+                return className;
             }
         }
-        if (str.charAt(0) >= 'A' && str.charAt(0) <= 'Z' && str.length() > 1) {
-            return "java.lang." + str;
+
+        // Check if it's a Java built-in class
+        if (Character.isUpperCase(name.charAt(0)) && name.length() > 1) {
+            return JAVA_LANG_PACKAGE + name;
         }
-        return str;
+
+        return name;
     }
 
     /**
-     * Process method parameters from a string.
+     * Process method parameters, handling arrays, varargs, and generics.
      *
-     * @param str The string containing method parameters.
-     * @return The processed method parameters.
+     * @param param The parameter string to process.
+     * @return The processed parameter string.
      */
-    private String processMethodParams(String str) {
-        if (str.contains("...")) {
-            return fixLibrary(str.replace("...", ""));
+    private String processMethodParams(String param) {
+        if (param.contains(VARARGS)) {
+            return resolveFullName(param.replace(VARARGS, ""));
         }
-        if (str.contains("[]")) {
-            int i = str.indexOf("[]");
-            return fixLibrary(str.replace("[]", "")) + str.substring(i);
+
+        if (param.contains(ARRAY_BRACKETS)) {
+            int bracketIndex = param.indexOf(ARRAY_BRACKETS);
+            return resolveFullName(param.replace(ARRAY_BRACKETS, "")) + ARRAY_BRACKETS;
         }
-        if (str.contains("<")) {
-            int i = str.indexOf("<");
-            StringBuilder fixedParamStr = new StringBuilder(fixLibrary(str.substring(0, i)) + "<");
-            String[] params = str.substring(i + 1, str.length() - 1).split(", ");
-            for (int j = 0; j < params.length; j++) {
-                if (j != 0) {
-                    fixedParamStr = new StringBuilder(fixedParamStr.toString().concat(", "));
-                }
-                if (params[j].startsWith("?")) {
-                    fixedParamStr = new StringBuilder(fixedParamStr.toString().concat(params[j]));
-                } else {
-                    fixedParamStr.append(fixLibrary(params[j]));
-                }
+
+        if (param.contains(OPEN_BRACKET)) {
+            return processGenericParameter(param);
+        }
+
+        return resolveFullName(param);
+    }
+
+    /**
+     * Process generic type parameters.
+     *
+     * @param param The generic parameter string.
+     * @return The processed generic parameter string.
+     */
+    private String processGenericParameter(String param) {
+        int bracketIndex = param.indexOf(OPEN_BRACKET);
+        StringBuilder result = new StringBuilder(
+            resolveFullName(param.substring(0, bracketIndex)) + OPEN_BRACKET);
+        
+        String[] typeParams = param.substring(
+            bracketIndex + 1, param.length() - 1).split(COMMA + SPACE);
+        for (int i = 0; i < typeParams.length; i++) {
+            if (i > 0) {
+                result.append(COMMA + SPACE);
             }
-            return fixedParamStr.toString().concat(">");
-        } else {
-            return fixLibrary(str);
+            if (typeParams[i].startsWith(WILDCARD)) {
+                result.append(typeParams[i]);
+            } else {
+                result.append(resolveFullName(typeParams[i]));
+            }
         }
+        
+        return result.append(CLOSE_BRACKET).toString();
     }
 
     /**
@@ -109,94 +157,139 @@ public class Week10 {
      * @param line The line of code containing static method information.
      */
     private void processStaticMethod(String line) {
-        if (line.contains("=")) {
+        if (line.contains(EQUALS)) {
+            System.out.println("Error: Line contains equals sign: " + line);
             return;
         }
-        int opi = line.indexOf("(");
-        int cpi = line.indexOf(")", opi + 1);
-        if (cpi == -1 || opi == -1) {
+
+        int openParenIndex = line.indexOf(OPEN_PAREN);
+        int closeParenIndex = line.indexOf(CLOSE_PAREN, openParenIndex);
+        if (closeParenIndex == -1 || openParenIndex == -1) {
+            System.out.println("Error: No parentheses found in line: " + line);
             return;
         }
-        String name = line.substring(line.substring(0, opi).lastIndexOf(" ") + 1, opi);
-        if (cpi - opi == 1) {
-            staticMethodSignatures.add(name.concat("()"));
+
+        String methodName = line.substring(
+            line.substring(0, openParenIndex).lastIndexOf(SPACE) + 1, openParenIndex);
+        
+        if (closeParenIndex - openParenIndex == 1) {
+            staticMethodSignatures.add(methodName + "()");
             return;
         }
-        String signature = name + "(";
-        String params = line.substring(opi + 1, cpi);
-        String[] paramList = params.split(", ");
-        for (int i = 0; i < paramList.length; i++) {
-            if (i != 0) {
-                signature = signature.concat(",");
-            }
-            String paramPart = paramList[i].substring(0, paramList[i].lastIndexOf(" "));
-            String paramstr = paramPart.replace("final", "").trim();
-            String param = processMethodParams(paramstr);
-            signature = signature.concat(param);
-        }
-        signature = signature.concat(")");
+
+        String signature = buildMethodSignature(
+            methodName, line.substring(openParenIndex + 1, closeParenIndex));
         staticMethodSignatures.add(signature);
     }
 
     /**
-     * Preprocess the file content to remove unnecessary lines.
+     * Build a complete method signature from method name and parameters.
+     *
+     * @param methodName The name of the method.
+     * @param params The parameter string.
+     * @return The complete method signature.
+     */
+    private String buildMethodSignature(String methodName, String params) {
+        StringBuilder signature = new StringBuilder(methodName + OPEN_PAREN);
+        String[] paramList = params.split(COMMA + SPACE);
+        
+        for (int i = 0; i < paramList.length; i++) {
+            if (i > 0) {
+                signature.append(COMMA);
+            }
+            String paramType = paramList[i].substring(0, paramList[i].lastIndexOf(SPACE))
+                    .replace(FINAL_KEYWORD, "").trim();
+            signature.append(processMethodParams(paramType));
+        }
+        
+        return signature.append(CLOSE_PAREN).toString();
+    }
+
+    /**
+     * Preprocess the file content to remove unnecessary line breaks.
      *
      * @param fileContent The content of the file to preprocess.
-     * @return The preprocessed content of the file.
+     * @return The preprocessed content.
      */
     private StringBuilder preProcess(String fileContent) {
         StringBuilder result = new StringBuilder(fileContent);
-        int opi = result.indexOf("(");
-        while (opi != -1) {
-            int cpi = result.indexOf(")", opi);
-            if (cpi == -1 || opi == -1) {
-                return result;
+        int openParenIndex = result.indexOf(OPEN_PAREN);
+        
+        while (openParenIndex != -1) {
+            int closeParenIndex = result.indexOf(CLOSE_PAREN, openParenIndex);
+            if (closeParenIndex == -1) {
+                System.out.println("Error: No closing parenthesis found.");
+                break;
             }
-            for (int i = cpi; i > opi; i--) {
+            
+            for (int i = closeParenIndex; i > openParenIndex; i--) {
                 if (result.charAt(i) == '\n') {
                     result.deleteCharAt(i);
                 }
             }
-            opi = result.indexOf("(", opi + 2);
+            openParenIndex = result.indexOf(OPEN_PAREN, openParenIndex + 2);
         }
+        
         return result;
     }
 
     /**
-     * Extract lines from the file content, removing comments and unnecessary characters.
+     * Extract and clean lines from the file content.
      *
-     * @param fileContent The content of the file to extract lines from.
-     * @return An array of lines extracted from the file content.
+     * @param fileContent The content of the file to process.
+     * @return An array of cleaned lines.
      */
     private String[] extractLines(String fileContent) {
-        StringBuilder preProcessed = preProcess(fileContent);
-
-        int lci = preProcessed.indexOf("//");
-        while (lci != -1) {
-            int nli = preProcessed.indexOf("\n", lci);
-            if (nli == -1) {
-                preProcessed.delete(lci, preProcessed.length());
-                break;
-            }
-            preProcessed.delete(lci, nli);
-            lci = preProcessed.indexOf("//");
-        }
-        // Xử lý comment khối
-        int bci = preProcessed.indexOf("/*");
-        while (bci != -1) {
-            int bcei = preProcessed.indexOf("*/", bci);
-            if (bcei == -1) {
-                break;
-            }
-            preProcessed.delete(bci, bcei + 3);
-            bci = preProcessed.indexOf("/*");
-        }
-
-        String cleanedContent = preProcessed.toString();
-
-        return cleanedContent.replace("{", "{\n").split("\n");
+        StringBuilder processed = preProcess(fileContent);
+        
+        // Remove single-line comments
+        processed = removeSingleLineComments(processed);
+        
+        // Remove block comments
+        processed = removeBlockComments(processed);
+        
+        return processed.toString().replace("{", "{\n").split("\n");
     }
 
+    /**
+     * Remove single-line comments from the content.
+     *
+     * @param content The content to process
+     * @return The content without single-line comments
+     */
+    private StringBuilder removeSingleLineComments(StringBuilder content) {
+        int commentIndex = content.indexOf("//");
+        while (commentIndex != -1) {
+            int newlineIndex = content.indexOf("\n", commentIndex);
+            if (newlineIndex == -1) {
+                content.delete(commentIndex, content.length());
+                break;
+            }
+            content.delete(commentIndex, newlineIndex);
+            commentIndex = content.indexOf("//");
+        }
+        return content;
+    }
+
+    /**
+     * Remove block comments from the content.
+     *
+     * @param content The content to process.
+     * @return The content without block comments.
+     */
+    private StringBuilder removeBlockComments(StringBuilder content) {
+        int startIndex = content.indexOf("/*");
+        while (startIndex != -1) {
+            int endIndex = content.indexOf("*/", startIndex);
+            if (endIndex == -1) {
+                System.out.println("Error: No closing block comment found.");
+                break;
+            }
+            content.delete(startIndex, endIndex + 2);
+            startIndex = content.indexOf("/*");
+        }
+        return content;
+    }
 
     /**
      * Get all function signatures from the given file content.
@@ -206,26 +299,27 @@ public class Week10 {
      */
     public List<String> getAllFunctions(String fileContent) {
         String[] lines = extractLines(fileContent);
+        
         for (String line : lines) {
-            if (line.startsWith("import")) {
+            if (line.startsWith(IMPORT_KEYWORD)) {
                 processImports(line);
-            } else if (line.startsWith("package")) {
+            } else if (line.startsWith(PACKAGE_KEYWORD)) {
                 processPackage(line);
-            } else if (line.contains("class")) {
+            } else if (line.contains(CLASS_KEYWORD)) {
                 processClass(line);
-            } else if (line.contains("static")) {
+            } else if (line.contains(STATIC_KEYWORD)) {
                 linesWithStaticMethods.add(line);
-            } else if (line.contains("enum")) {
-                processClass(line.replace("enum", "class"));
-            } else if (line.contains("interface")) {
-                processClass(line.replace("interface", "class"));
+            } else if (line.contains(ENUM_KEYWORD)) {
+                processClass(line.replace(ENUM_KEYWORD, CLASS_KEYWORD));
+            } else if (line.contains(INTERFACE_KEYWORD)) {
+                processClass(line.replace(INTERFACE_KEYWORD, CLASS_KEYWORD));
             }
         }
+
         for (String method : linesWithStaticMethods) {
             processStaticMethod(method);
         }
+        
         return staticMethodSignatures;
     }
-
-
 }
