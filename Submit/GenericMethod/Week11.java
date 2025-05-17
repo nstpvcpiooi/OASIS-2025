@@ -5,9 +5,6 @@ public class Week11 {
 
     /**
      * Sort a list of integers.
-     *
-     * @param list the list of integers to sort.
-     * @return the sorted list of integers.
      */
     public static <T extends Comparable<T>> List<T> sortGeneric(List<T> list) {
         List<T> sortedList = new ArrayList<T>();
